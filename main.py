@@ -1,10 +1,12 @@
 from PyQt6.QtWidgets import (
     QApplication, QWidget, QMainWindow, QVBoxLayout,
-    QHBoxLayout, QStackedWidget, QLabel, QPushButton
+    QHBoxLayout, QStackedWidget, QLabel, QPushButton,
+    QFileDialog, QMessageBox
 )
 from PyQt6.QtGui import QPixmap, QPainter
 from PyQt6.QtCore import Qt
 import sys
+import pandas as pd
 
 class BackgroundWidget(QWidget):
     def __init__(self, image_path, parent=None):
@@ -19,7 +21,7 @@ class DatasetUploadWidget(QWidget):
     def __init__(self):
         super().__init__()
         dataset_layout = QVBoxLayout(self)
-        self.info = QLabel("Upload your dataset here.")
+        self.info = QLabel("No dataset selected!")
         self.datasetupload_btn = QPushButton("Upload Dataset")
 
         dataset_layout.addWidget(self.info)
@@ -29,7 +31,27 @@ class DatasetUploadWidget(QWidget):
         self.dataset = None
     
     def upload_dataset(self):
-        pass
+        filepath, _ = QFileDialog.getOpenFileName(self, "Open Dataset", "", "CSV Files (*.csv);;All Files (*)")
+        if filepath:
+            self.dataset = filepath
+            self.info.setText(f"Dataset uploaded: {self.dataset}")
+        
+        if filepath:
+            try:
+                if filepath.endswith('.csv'):
+                    self.dataset = pd.read_csv(filepath)
+                elif filepath.endswith('.xlsx'):
+                    self.dataset = pd.read_excel(filepath)
+                else:
+                    raise ValueError("Unsupported file format")
+
+                self.filepath = filepath
+                self.info.setText(f"Dataset uploaded: {self.filepath}")
+            
+            except Exception as e:
+                QMessageBox.critical(self, "Error", "Failed to load dataset!")
+        else:
+            self.info.setText("No dataset selected!")
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -39,7 +61,7 @@ class MainWindow(QMainWindow):
 
         self.stacked_widgets = QStackedWidget(self)
         self.setCentralWidget(self.stacked_widgets)
-        self.start_widget = BackgroundWidget("MINIPROJECT/resources/start_bg.jpg")
+        self.start_widget = BackgroundWidget("resources/start_bg.jpg")
         hlayout = QHBoxLayout(self.start_widget)
         vlayout = QVBoxLayout()
         vlayout.addStretch(1)
@@ -63,7 +85,6 @@ class MainWindow(QMainWindow):
         self.stacked_widgets.addWidget(self.dataset_upload_page)
 
         start_btn.clicked.connect(lambda: self.stacked_widgets.setCurrentWidget(self.dataset_upload_page))
-
 
 app = QApplication(sys.argv)
 Window = MainWindow()
